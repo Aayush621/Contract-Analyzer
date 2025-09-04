@@ -6,7 +6,6 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 8000
     envVars:
       - key: MONGO_URI
         sync: false
@@ -26,7 +25,7 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    startCommand: celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo
+    command: ["celery", "-A", "tasks.celery_worker.celery_app", "worker", "--loglevel=info", "--pool=solo"]
     envVars:
       - key: MONGO_URI
         sync: false
