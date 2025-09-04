@@ -1,0 +1,41 @@
+services:
+  # FastAPI Web Service
+  - type: web
+    name: contract-api
+    env: docker
+    repo: https://github.com/Aayush621/Contract-Analyzer.git   
+    plan: free
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port 8000
+    image:
+      url: docker.io/aayush621/contract_analysis-api:latest 
+    envVars:
+      - key: MONGODB_URI
+        sync: false  
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: contract-redis
+          property: connectionString
+
+  # Celery Worker
+  - type: worker
+    name: contract-worker
+    env: docker
+    repo: https://github.com/Aayush621/Contract-Analyzer.git 
+    plan: free
+    dockerCommand: celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo
+    image:
+      url: docker.io/aayush621/contract_analysis-api:latest  
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: contract-redis
+          property: connectionString
+
+databases:
+  # Managed Redis by Render
+  - name: contract-redis
+    plan: free
