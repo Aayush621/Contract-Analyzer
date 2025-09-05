@@ -17,7 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 6. Download the necessary NLP models and NLTK data
-RUN python -m spacy download en_core_web_trf
+RUN python -m spacy download en_core_web_sm
 RUN python -c "import nltk; nltk.download('punkt')"
 
 # 7. Copy the rest of the application code into the working directory

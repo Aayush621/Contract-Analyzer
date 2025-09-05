@@ -7,8 +7,8 @@ from sentence_transformers import SentenceTransformer, util
 from typing import Dict, Any, List
 
 try:
-    nlp = spacy.load("en_core_web_trf")
-    print("spaCy model 'en_core_web_trf' loaded successfully.")
+    nlp = spacy.load("en_core_web_sm")
+    print("spaCy model 'en_core_web_sm' loaded successfully.")
 except OSError:
     print("SpaCy model not found. Please run: python -m spacy download en_core_web_trf")
     nlp = None
