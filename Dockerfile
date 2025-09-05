@@ -16,24 +16,14 @@ COPY requirements.txt .
 # 5. Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Download the necessary NLP models and NLTK data
-# Use the smallest possible models
-RUN python -m spacy download en_core_web_sm
-RUN python -c "import nltk; nltk.download('punkt')"
-
-# 7. Copy the rest of the application code into the working directory
+# 6. Copy the rest of the application code into the working directory
 COPY . .
 
-# 8. Expose the port the API will run on
+# 7. Expose the port the API will run on
 EXPOSE 8000
 
-# 9. Create a startup script that runs both services with proper sequencing
+# 8. Create a startup script with sequential model loading
 RUN echo '#!/bin/bash\n\
-# Download spacy model separately\n\
-echo "Downloading spacy model..."\n\
-python -m spacy download en_core_web_sm\n\
-echo "Spacy model downloaded"\n\
-\n\
 # Start Celery worker in background\n\
 echo "Starting Celery worker..."\n\
 celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo --concurrency=1 &\n\
@@ -41,12 +31,28 @@ echo "Celery worker started"\n\
 \n\
 # Wait for Celery to initialize\n\
 echo "Waiting for Celery to initialize..."\n\
-sleep 10\n\
+sleep 5\n\
+\n\
+# Pre-load models sequentially to avoid memory spikes\n\
+echo "Pre-loading spacy model..."\n\
+python -c "import spacy; spacy.load(\"en_core_web_sm\")"\n\
+echo "Spacy model pre-loaded"\n\
+\n\
+# Wait a bit\n\
+sleep 3\n\
+\n\
+# Pre-load sentence transformer\n\
+echo "Pre-loading sentence transformer..."\n\
+python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer(\"all-MiniLM-L6-v2\")"\n\
+echo "Sentence transformer pre-loaded"\n\
+\n\
+# Wait a bit\n\
+sleep 3\n\
 \n\
 # Start FastAPI server\n\
 echo "Starting FastAPI server..."\n\
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
-# 10. Run the startup script
+# 9. Run the startup script
 CMD ["/app/start.sh"]
