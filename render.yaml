@@ -28,11 +28,7 @@ services:
     # --- THIS IS THE CORRECTED SECTION ---
     # Define the persistent disk directly here.
     # It will be created and attached to this service.
-    disks:
-      - name: uploads-disk # The name for the disk volume
-        mountPath: /app/uploads # The path where it will be available inside the container
-        sizeGB: 1 # The size of the disk
-    # ---
+
     healthCheck:
       path: /
 
@@ -51,11 +47,7 @@ services:
     # --- THIS IS THE CORRECTED SECTION ---
     # Attach the SAME persistent disk by using the same 'name'.
     # Render is smart enough to know this means they share the volume.
-    disks:
-      - name: uploads-disk
-        mountPath: /app/uploads
-        sizeGB: 1 # Size must be specified, even when attaching an existing disk
-    # ---
+
 
 # --- Environment Group Definition ---
 envVarGroups:
