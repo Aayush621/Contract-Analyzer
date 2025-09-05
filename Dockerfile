@@ -1,4 +1,4 @@
-# Dockerfile
+# Dockerfile (Corrected and Simplified)
 
 # 1. Use an official, lightweight Python base image
 FROM python:3.11-slim
@@ -6,36 +6,25 @@ FROM python:3.11-slim
 # 2. Set the working directory inside the container
 WORKDIR /app
 
-# 3. Set environment variables to prevent Python from writing .pyc files
+# 3. Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# 4. Copy only the requirements file first to leverage Docker's build cache
+# 4. Copy and install requirements
 COPY requirements.txt .
-
-# 5. Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Copy the rest of the application code into the working directory
+# 5. Download the necessary NLP models during the build phase
+# This is crucial for both the 'lazy loading' fix and performance.
+RUN python -m spacy download en_core_web_trf
+RUN python -c "import nltk; nltk.download('punkt')"
+
+# 6. Copy the rest of the application code
 COPY . .
 
-# 7. Expose the port the API will run on
+# 7. Expose the port for the web service
 EXPOSE 8000
 
-# 8. Create a startup script with a break between commands
-RUN echo '#!/bin/bash\n\
-# Start Celery worker in background\n\
-echo "Starting Celery worker..."\n\
-celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo --concurrency=1 &\n\
-\n\
-# Wait for Celery to initialize\n\
-echo "Waiting for Celery to initialize..."\n\
-sleep 10\n\
-\n\
-# Start Uvicorn as the main process\n\
-echo "Starting Uvicorn server..."\n\
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1\n\
-' > /app/start.sh && chmod +x /app/start.sh
-
-# 9. Run the startup script
-CMD ["/app/start.sh"]
+# 8. Set the DEFAULT command. This will be used by the 'web' service.
+# The 'worker' service in render.yaml will override this.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
