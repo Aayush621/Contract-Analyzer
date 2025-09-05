@@ -1,67 +1,63 @@
-# render.yaml (Corrected for Separate Services)
+# render.yaml (Corrected - Disk defined within services)
 
 # This blueprint defines all the services needed for the contract intelligence app.
 # 1. A managed Redis instance for Celery.
-# 2. A persistent disk for file uploads.
-# 3. A Dockerized web service for the FastAPI API.
-# 4. A Dockerized background worker for the Celery process.
+# 2. A Dockerized web service for the FastAPI API.
+# 3. A Dockerized background worker for the Celery process.
+# A persistent disk will be created and attached to both the API and Worker.
 
 services:
   # -----------------
   #  1. Redis Service
   # -----------------
   - type: redis
-    name: redis-broker # Renamed for clarity, was 'contract-redis'
+    name: redis-broker
     plan: free
 
   # -----------------
-  #  2. Persistent Disk (Highly Recommended)
-  # -----------------
-  # This disk will be shared between the API and the Worker.
-  - type: disk
-    name: uploads-disk
-    mountPath: /app/uploads
-    sizeGB: 1
-
-  # -----------------
-  #  3. FastAPI Web Service (the API)
+  #  2. FastAPI Web Service (the API)
   # -----------------
   - type: web
     name: contract-api
     plan: free
-    runtime: docker # Use 'docker' runtime for Dockerfile builds
-    dockerfilePath: ./Dockerfile # Point to your Dockerfile
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     envVars:
-      # Use an Environment Group for secrets
       - fromGroup: contract-app-env
-    # Attach the persistent disk
+    # --- THIS IS THE CORRECTED SECTION ---
+    # Define the persistent disk directly here.
+    # It will be created and attached to this service.
     disks:
-      - name: uploads-disk
-        mountPath: /app/uploads
+      - name: uploads-disk # The name for the disk volume
+        mountPath: /app/uploads # The path where it will be available inside the container
+        sizeGB: 1 # The size of the disk
+    # ---
     healthCheck:
-      path: / # Use the root path for a simple health check
+      path: /
 
   # -----------------
-  #  4. Celery Background Worker
+  #  3. Celery Background Worker
   # -----------------
   - type: worker
     name: contract-worker
     plan: free
     runtime: docker
-    dockerfilePath: ./Dockerfile # Use the same Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
-    # This command OVERRIDES the Dockerfile's CMD for this service only
-    startCommand: celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo
+    startCommand: celery -A tasks.celery_worker worker --loglevel=info --pool=solo
     envVars:
-      # Use the same Environment Group
       - fromGroup: contract-app-env
-    # Attach the same persistent disk
+    # --- THIS IS THE CORRECTED SECTION ---
+    # Attach the SAME persistent disk by using the same 'name'.
+    # Render is smart enough to know this means they share the volume.
     disks:
       - name: uploads-disk
         mountPath: /app/uploads
+        sizeGB: 1 # Size must be specified, even when attaching an existing disk
+    # ---
 
 # --- Environment Group Definition ---
-# You will create this group in the Render UI to hold your secrets.
 envVarGroups:
-  - name: contract-app-env
+  - name: contract-app-env```
+
