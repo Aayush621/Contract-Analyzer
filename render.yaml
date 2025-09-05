@@ -36,6 +36,8 @@ services:
           name: contract-redis
           property: connectionString
 
-databases:
-  - name: contract-redis
+# Managed Redis service on Render
+services:
+  - type: redis
+    name: contract-redis
     plan: free
