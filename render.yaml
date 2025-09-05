@@ -9,11 +9,11 @@ services:
     envVars:
       - key: MONGO_URI
         fromService:
-          type: mongodb
+          type: mongo
           name: contract-mongodb
           property: connectionString
       - key: MONGO_DB_NAME
-        value: contract_db
+        value: Contract-analysis
       - key: REDIS_URI
         fromService:
           type: redis
@@ -31,11 +31,11 @@ services:
     envVars:
       - key: MONGO_URI
         fromService:
-          type: mongodb
+          type: mongo
           name: contract-mongodb
           property: connectionString
       - key: MONGO_DB_NAME
-        value: contract_db
+        value: Contract-analysis
       - key: REDIS_URI
         fromService:
           type: redis
