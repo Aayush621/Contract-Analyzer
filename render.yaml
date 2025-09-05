@@ -1,5 +1,5 @@
 services:
-  # FastAPI API Service
+  # FastAPI API Service (with built-in Celery worker)
   - type: web
     name: contract-api
     env: docker
@@ -18,27 +18,9 @@ services:
           property: connectionString
     healthCheckPath: /docs
 
-  # Celery Worker Service
-  - type: worker
-    name: contract-worker
-    env: docker
-    plan: free
-    dockerfilePath: ./Dockerfile.worker
-    dockerContext: .
-    envVars:
-      - key: MONGO_URI
-        sync: false
-      - key: MONGO_DB_NAME
-        value: Contract-analysis
-      - key: REDIS_URI
-        fromService:
-          type: redis
-          name: contract-redis
-          property: connectionString
-
   # Managed Redis Service
   - type: redis
     name: contract-redis
     plan: free
-    ipAllowList: # required field
-      - source: 0.0.0.0/0   # allow all IPs (not secure for prod, but works)
+    ipAllowList:
+      - source: 0.0.0.0/0

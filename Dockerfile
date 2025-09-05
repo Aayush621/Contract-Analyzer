@@ -17,7 +17,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 6. Download the necessary NLP models and NLTK data
-# This bakes the models into the image so they don't need to be downloaded on every container start.
 RUN python -m spacy download en_core_web_trf
 RUN python -c "import nltk; nltk.download('punkt')"
 
@@ -27,6 +26,11 @@ COPY . .
 # 8. Expose the port the API will run on
 EXPOSE 8000
 
-# 9. The default command to run when the container starts.
-# We will override this for the Celery worker in docker-compose.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 9. Create a startup script that runs both services
+RUN echo '#!/bin/bash\n\
+celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo &\n\
+uvicorn main:app --host 0.0.0.0 --port 8000\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# 10. Run the startup script
+CMD ["/app/start.sh"]
