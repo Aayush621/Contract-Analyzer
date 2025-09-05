@@ -8,7 +8,10 @@ services:
     dockerContext: .
     envVars:
       - key: MONGO_URI
-        sync: false
+        fromService:
+          type: mongodb
+          name: contract-mongodb
+          property: connectionString
       - key: MONGO_DB_NAME
         value: contract_db
       - key: REDIS_URI
@@ -27,7 +30,10 @@ services:
     dockerContext: .
     envVars:
       - key: MONGO_URI
-        sync: false
+        fromService:
+          type: mongodb
+          name: contract-mongodb
+          property: connectionString
       - key: MONGO_DB_NAME
         value: contract_db
       - key: REDIS_URI
@@ -38,4 +44,6 @@ services:
 
 databases:
   - name: contract-redis
+    plan: free
+  - name: contract-mongodb
     plan: free
