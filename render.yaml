@@ -38,5 +38,4 @@ services:
 
 databases:
   - name: contract-redis
-    type: redis
     plan: free
