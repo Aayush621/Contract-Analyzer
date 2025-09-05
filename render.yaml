@@ -40,3 +40,5 @@ services:
   - type: redis
     name: contract-redis
     plan: free
+    ipAllowList: # required field
+      - source: 0.0.0.0/0   # allow all IPs (not secure for prod, but works)
