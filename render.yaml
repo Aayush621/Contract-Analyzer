@@ -29,8 +29,7 @@ services:
     # Define the persistent disk directly here.
     # It will be created and attached to this service.
 
-    healthCheck:
-      path: /
+    
 
   # -----------------
   #  3. Celery Background Worker
