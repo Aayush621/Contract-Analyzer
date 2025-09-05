@@ -5,48 +5,99 @@ import pdfplumber
 import nltk
 from sentence_transformers import SentenceTransformer, util
 from typing import Dict, Any, List
+import gc
 
-try:
-    nlp = spacy.load("en_core_web_sm")
-    print("spaCy model 'en_core_web_sm' loaded successfully.")
-except OSError:
-    print("SpaCy model not found. Please run: python -m spacy download en_core_web_trf")
-    nlp = None
+# Global variables to store loaded models
+_nlp = None
+_semantic_model = None
 
-try:
-    semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("Sentence Transformer model 'all-MiniLM-L6-v2' loaded successfully.")
-except Exception as e:
-    semantic_model = None
+def get_spacy_model():
+    """Load spacy model only when first needed"""
+    global _nlp
+    if _nlp is None:
+        print("Loading spacy model...")
+        try:
+            _nlp = spacy.load("en_core_web_sm")
+            print("SpaCy model 'en_core_web_sm' loaded successfully.")
+        except OSError:
+            print("SpaCy model not found. Please run: python -m spacy download en_core_web_sm")
+            raise RuntimeError("SpaCy model not available")
+    return _nlp
+
+def get_semantic_model():
+    """Load sentence transformer only when first needed"""
+    global _semantic_model
+    if _semantic_model is None:
+        print("Loading sentence transformer...")
+        try:
+            _semantic_model = SentenceTransformer('all-MiniLM-L4-v2')
+            print("Sentence Transformer model 'all-MiniLM-L4-v2' loaded successfully.")
+        except Exception as e:
+            print(f"Error loading sentence transformer: {e}")
+            raise RuntimeError("Sentence transformer not available")
+    return _semantic_model
+
+def clear_models():
+    """Clear models from memory when not needed"""
+    global _nlp, _semantic_model
+    _nlp = None
+    _semantic_model = None
+    gc.collect()
+    print("Models cleared from memory")
 
 def analyze_contract_advanced(file_path: str) -> Dict[str, Any]:
-    if not nlp or not semantic_model:
-        raise RuntimeError("A required NLP model failed to load. Cannot process documents.")
-    processor = ContractProcessor(file_path)
-    return processor.process()
-
+    """Main analysis function with memory management"""
+    try:
+        processor = ContractProcessor(file_path)
+        return processor.process()
+    except Exception as e:
+        print(f"Error in contract analysis: {e}")
+        # Clear models on error
+        clear_models()
+        raise e
 
 class ContractProcessor:
     def __init__(self, file_path: str):
         self.file_path = file_path
-        
-        self.full_text = self._get_full_text() # This gets the full text of the PDF file.
+        self.full_text = self._get_full_text()
         self.found_fields = {}
 
     def process(self) -> Dict[str, Any]:
-        """Orchestrates the entire extraction pipeline."""
-        self._extract_with_ner_and_context()
-        self._extract_with_regex()
-        self._extract_with_layout_parser()
-        self._extract_with_semantic_classifier()
-        # --- Consolidate findings ---
-        # If layout parser found a signatory, it's higher confidence
-        if self.found_fields.get("signature_block_signatory"):
-            self.found_fields["authorized_signatory"] = self.found_fields["signature_block_signatory"]
-        elif self.found_fields.get("textual_representative"):
-            self.found_fields["authorized_signatory"] = self.found_fields["textual_representative"]
+        """Orchestrates the entire extraction pipeline with memory management"""
+        try:
+            # Load and use spacy model
+            nlp = get_spacy_model()
+            self._extract_with_ner_and_context(nlp)
+            # Clear spacy model from memory
+            del nlp
+            gc.collect()
+            
+            # Extract with regex (no model needed)
+            self._extract_with_regex()
+            
+            # Extract with layout parser (no model needed)
+            self._extract_with_layout_parser()
+            
+            # Load and use semantic model
+            semantic_model = get_semantic_model()
+            self._extract_with_semantic_classifier(semantic_model)
+            # Clear semantic model from memory
+            del semantic_model
+            gc.collect()
+            
+            # Consolidate findings
+            if self.found_fields.get("signature_block_signatory"):
+                self.found_fields["authorized_signatory"] = self.found_fields["signature_block_signatory"]
+            elif self.found_fields.get("textual_representative"):
+                self.found_fields["authorized_signatory"] = self.found_fields["textual_representative"]
 
-        return self._structure_and_finalize()
+            return self._structure_and_finalize()
+            
+        except Exception as e:
+            print(f"Error in processing: {e}")
+            # Clear models on error
+            clear_models()
+            raise e
     
     def _get_full_text(self) -> str:
         try:
@@ -57,11 +108,8 @@ class ContractProcessor:
             return ""
 
     # --- STRATEGY 1: NER ---
-    def _extract_with_ner_and_context(self):
-        """
-        Extracts Party names and also searches for text defining an
-        'authorized representative' which is a broader concept than a signatory.
-        """
+    def _extract_with_ner_and_context(self, nlp):
+        """Extracts Party names and searches for authorized representative"""
         text_chunk_for_parties = self.full_text[:50000]
         doc = nlp(text_chunk_for_parties)
         
@@ -72,15 +120,11 @@ class ContractProcessor:
             self.found_fields["vendor_name"] = {"value": orgs[1], "confidence_score": 0.75}
 
         # 2. Find "Authorized Representative" in the text
-        # This looks for a PERSON's name near keywords like "representative" or "contact for notices".
-        # It's a lower confidence match than a signature block.
         representative_patterns = [
-            r"(?:authorized representatives|primary contact|contact for notices)\s*:\s*([A-Z][a-z]+ [A-Z][a-z]+)", # "Name: John Doe"
-            r"([A-Z][a-z]+ [A-Z][a-z]+)\s*,?\s*shall be the authorized representatives" # "John Doe shall be the..."
+            r"(?:authorized representatives|primary contact|contact for notices)\s*:\s*([A-Z][a-z]+ [A-Z][a-z]+)",
+            r"([A-Z][a-z]+ [A-Z][a-z]+)\s*,?\s*shall be the authorized representatives"
         ]
-        # We store this with a temporary key.
         self.found_fields["textual_representative"] = self._find_field_regex(self.full_text, representative_patterns, 0.80)
-
 
     # --- STRATEGY 2: REGEX  ---
     def _extract_with_regex(self):
@@ -92,28 +136,20 @@ class ContractProcessor:
 
     # --- STRATEGY 3: LAYOUT  ---
     def _extract_with_layout_parser(self):
-        """
-        This method is now laser-focused on finding the person who PHYSICALLY SIGNS
-        in the signature block. This is a high-confidence find.
-        """
-        # We store this with a different temporary key.
+        """Finds the person who PHYSICALLY SIGNS in the signature block"""
         self.found_fields["signature_block_signatory"] = self._find_signatory_by_layout()
 
     # --- STRATEGY 4: SEMANTIC ---
-    def _extract_with_semantic_classifier(self):
-        """
-        Combines semantic search with a broad regex fallback to ensure
-        we catch renewal clauses even if the ML model is uncertain.
-        """
-        # 1. Try the high-precision ML model first.
-        renewal_semantic = self._classify_renewal_clause_chunked()
+    def _extract_with_semantic_classifier(self, semantic_model):
+        """Combines semantic search with regex fallback"""
+        # 1. Try the high-precision ML model first
+        renewal_semantic = self._classify_renewal_clause_chunked(semantic_model)
         
-        if renewal_semantic and renewal_semantic["confidence_score"] > 0.65: # Trust the ML model if confident
+        if renewal_semantic and renewal_semantic["confidence_score"] > 0.65:
             self.found_fields["renewal_terms"] = renewal_semantic
         else:
-            # 2. If ML fails or is not confident, fall back to a broad, context-capturing regex.
+            # 2. Fall back to regex
             print("Semantic renewal search had low confidence. Falling back to regex.")
-            # This regex looks for sentences containing keywords related to the contract's duration or end.
             renewal_regex_patterns = [
                 r"([^\.!?]*?(?:term of this agreement|expiration|renew|terminate)[^\.!?]*[\.!?])"
             ]
@@ -140,7 +176,6 @@ class ContractProcessor:
         return None
 
     def _find_signatory_by_layout(self) -> Dict[str, Any]:
-
         try:
             with pdfplumber.open(self.file_path) as pdf:
                 last_page = pdf.pages[-1]
@@ -156,8 +191,7 @@ class ContractProcessor:
             print(f"Error processing with pdfplumber: {e}")
         return None
 
-    def _classify_renewal_clause_chunked(self) -> Dict[str, Any]:
-
+    def _classify_renewal_clause_chunked(self, semantic_model) -> Dict[str, Any]:
         categories = {"Affirmative Renewal": "The contract will automatically renew.","Negative Renewal": "The contract will not automatically renew.","Conditional Renewal": "The contract renews unless one party acts to terminate it."}
         category_embeddings = semantic_model.encode(list(categories.values()))
         best_match = {"score": 0, "sentence": None, "category": None}
