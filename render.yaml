@@ -52,7 +52,7 @@ services:
     dockerfilePath: ./Dockerfile # Use the same Dockerfile
     dockerContext: .
     # This command OVERRIDES the Dockerfile's CMD for this service only
-    startCommand: celery -A tasks.celery_worker worker --loglevel=info --pool=solo
+    startCommand: celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo
     envVars:
       # Use the same Environment Group
       - fromGroup: contract-app-env
