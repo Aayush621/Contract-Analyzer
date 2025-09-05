@@ -27,11 +27,24 @@ COPY . .
 # 8. Expose the port the API will run on
 EXPOSE 8000
 
-# 9. Create a startup script that runs both services
+# 9. Create a startup script that runs both services with proper sequencing
 RUN echo '#!/bin/bash\n\
-# Start Celery worker in background with minimal memory\n\
+# Download spacy model separately\n\
+echo "Downloading spacy model..."\n\
+python -m spacy download en_core_web_sm\n\
+echo "Spacy model downloaded"\n\
+\n\
+# Start Celery worker in background\n\
+echo "Starting Celery worker..."\n\
 celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo --concurrency=1 &\n\
+echo "Celery worker started"\n\
+\n\
+# Wait for Celery to initialize\n\
+echo "Waiting for Celery to initialize..."\n\
+sleep 10\n\
+\n\
 # Start FastAPI server\n\
+echo "Starting FastAPI server..."\n\
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
