@@ -164,7 +164,7 @@ async def list_contracts(
     # Only fetch the data needed for the summary view to keep the response fast.
     projection = {
         "contract_id": 1, "file_name": 1, "upload_timestamp": 1,
-        "processing_status": 1, "gaps_count": 1, "_id": 0
+        "processing_status": 1, "gaps_count": 1, "file_size": 1, "_id": 0
     }
     # If sorting by relevance, we must also project the score
     if sort_by == "relevance":
@@ -189,7 +189,8 @@ async def list_contracts(
             upload_timestamp=c.get("upload_timestamp"),
             processing_status=c.get("processing_status"),
             # Calculate gaps_count safely, handling cases where the field might be missing
-             gaps_count=c.get("gaps_count") or 0
+             gaps_count=c.get("gaps_count") or 0,
+             file_size=c.get("file_size") or 0,
         )
         for c in contracts_list
     ]

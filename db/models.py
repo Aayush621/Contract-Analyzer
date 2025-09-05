@@ -48,7 +48,7 @@ class ContractSummary(BaseModel):
     upload_timestamp: datetime
     processing_status: str
     gaps_count: int # A useful metric for a list view
-
+    file_size: int
 # --- The structured response model for the paginated endpoint ---
 class PaginatedContractResponse(BaseModel):
     total_items: int
