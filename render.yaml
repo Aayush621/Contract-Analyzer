@@ -1,4 +1,4 @@
-# render.yaml (Corrected for Indentation)
+# render.yaml (Final Corrected Version)
 
 services:
   # -----------------
@@ -17,19 +17,17 @@ services:
   - type: web
     name: contract-api
     plan: free
+    # 'runtime: docker' is CORRECT for a 'type: web' service.
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
     envVars:
       - fromGroup: contract-app-env
-    # --- INDENTATION FIXED ---
-    # 'disks' is a property of the 'web' service, so it must be indented.
+    # 'disks' and 'healthCheck' are properties of the 'web' service.
     disks:
       - name: uploads-disk
         mountPath: /app/uploads
         sizeGB: 1
-    # --- INDENTATION FIXED ---
-    # 'healthCheck' is also a property of the 'web' service.
     healthCheck:
       path: /
 
@@ -39,19 +37,20 @@ services:
   - type: worker
     name: contract-worker
     plan: free
+    # CRITICAL FIX: The 'runtime: docker' key is REMOVED.
+    # For a 'type: worker', Render knows to use Docker because 'dockerfilePath' is present.
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    startCommand: celery -A tasks.celery_worker.celery_app worker --loglevel=info --pool=solo
+    startCommand: celery -A tasks.celery_worker worker --loglevel=info --pool=solo
     envVars:
       - fromGroup: contract-app-env
-    # --- INDENTATION FIXED ---
-    # 'disks' is a property of the 'worker' service, so it must be indented.
+    # 'disks' is a valid property of a 'worker' service.
     disks:
       - name: uploads-disk
         mountPath: /app/uploads
         sizeGB: 1
 
 # --- Environment Group Declaration ---
-# This block is correct. It only declares the name of the group.
+# This section declares that the services above will use a group managed in the UI.
 envVarGroups:
   - name: contract-app-env
