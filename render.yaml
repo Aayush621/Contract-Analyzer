@@ -1,12 +1,16 @@
-# render.yaml
+# render.yaml (Corrected for Render deployment)
 
 services:
   # -----------------
-  #  1. Redis Service
+  #  1. Redis Service (FIXED)
   # -----------------
   - type: redis
     name: redis-broker
     plan: free
+    # FIX: Added required IP Allow List to permit connections
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: "Allow all connections"
 
   # -----------------
   #  2. FastAPI Web Service (the API)
@@ -14,35 +18,41 @@ services:
   - type: web
     name: contract-api
     plan: free
-    runtime: docker
+    runtime: docker # 'runtime: docker' is correct for 'type: web'
     dockerfilePath: ./Dockerfile
     dockerContext: .
     envVars:
+      # This correctly links to the Environment Group managed in the UI
       - fromGroup: contract-app-env
+    # We still need the disk for uploads
+    disks:
+      - name: uploads-disk
+        mountPath: /app/uploads
+        sizeGB: 1
+    healthCheck:
+      path: /
 
   # -----------------
-  #  3. Celery Background Worker
+  #  3. Celery Background Worker (FIXED)
   # -----------------
   - type: worker
     name: contract-worker
     plan: free
-    runtime: docker
+    # FIX: Removed the invalid 'runtime: docker' line.
+    # The 'dockerfilePath' is all that's needed to trigger a Docker build.
     dockerfilePath: ./Dockerfile
     dockerContext: .
     startCommand: celery -A tasks.celery_worker worker --loglevel=info --pool=solo
     envVars:
       - fromGroup: contract-app-env
+    # Attach the same shared disk
+    disks:
+      - name: uploads-disk
+        mountPath: /app/uploads
+        sizeGB: 1
 
-# --- Environment Group Definition ---
+# --- Environment Group Declaration (FIXED) ---
+# FIX: This block should only declare the NAME of the group.
+# The actual keys and values MUST be managed in the Render UI for security.
 envVarGroups:
   - name: contract-app-env
-    envVars:
-      - key: MONGO_URI
-        value: mongodb+srv://render_user:renderapptest5678@contract-analysis.rkzewtz.mongodb.net/?retryWrites=true&w=majority
-      - key: MONGO_DB_NAME
-        value: Contract-analysis
-      - key: REDIS_URI
-        value: redis://red-d2tf6ure5dus73dpohdg:6379
-      - key: UPLOADS_DIR
-        value: uploads
-
