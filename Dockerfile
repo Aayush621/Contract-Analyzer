@@ -1,7 +1,7 @@
 # Dockerfile (Corrected and Simplified)
 
 # 1. Use an official, lightweight Python base image
-FROM python:3.11-slim
+FROM python:3.11
 
 # 2. Set the working directory inside the container
 WORKDIR /app
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
-    
+
 # 4. Copy and install requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
