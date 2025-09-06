@@ -1,4 +1,8 @@
-# render.yaml (Final Corrected Version)
+# render.yaml (Final Version with all Corrections)
+
+# CRITICAL FIX: Added the mandatory version specifier.
+# This tells Render to use the modern Blueprint schema.
+version: "1"
 
 services:
   # -----------------
@@ -17,8 +21,7 @@ services:
   - type: web
     name: contract-api
     plan: free
-    # 'runtime: docker' is CORRECT for a 'type: web' service.
-    runtime: docker
+    runtime: docker # 'runtime: docker' is correct for 'type: web'
     dockerfilePath: ./Dockerfile
     dockerContext: .
     envVars:
@@ -37,8 +40,7 @@ services:
   - type: worker
     name: contract-worker
     plan: free
-    # CRITICAL FIX: The 'runtime: docker' key is REMOVED.
-    # For a 'type: worker', Render knows to use Docker because 'dockerfilePath' is present.
+    # For a 'type: worker', you do NOT use the 'runtime' key.
     dockerfilePath: ./Dockerfile
     dockerContext: .
     startCommand: celery -A tasks.celery_worker worker --loglevel=info --pool=solo
