@@ -1,10 +1,4 @@
-# render.yaml (Corrected - Disk defined within services)
-
-# This blueprint defines all the services needed for the contract intelligence app.
-# 1. A managed Redis instance for Celery.
-# 2. A Dockerized web service for the FastAPI API.
-# 3. A Dockerized background worker for the Celery process.
-# A persistent disk will be created and attached to both the API and Worker.
+# render.yaml
 
 services:
   # -----------------
@@ -25,11 +19,6 @@ services:
     dockerContext: .
     envVars:
       - fromGroup: contract-app-env
-    # --- THIS IS THE CORRECTED SECTION ---
-    # Define the persistent disk directly here.
-    # It will be created and attached to this service.
-
-    
 
   # -----------------
   #  3. Celery Background Worker
@@ -43,12 +32,17 @@ services:
     startCommand: celery -A tasks.celery_worker worker --loglevel=info --pool=solo
     envVars:
       - fromGroup: contract-app-env
-    # --- THIS IS THE CORRECTED SECTION ---
-    # Attach the SAME persistent disk by using the same 'name'.
-    # Render is smart enough to know this means they share the volume.
-
 
 # --- Environment Group Definition ---
 envVarGroups:
-  - name: contract-app-env```
+  - name: contract-app-env
+    envVars:
+      - key: MONGO_URI
+        value: mongodb+srv://render_user:renderapptest5678@contract-analysis.rkzewtz.mongodb.net/?retryWrites=true&w=majority
+      - key: MONGO_DB_NAME
+        value: Contract-analysis
+      - key: REDIS_URI
+        value: redis://red-d2tf6ure5dus73dpohdg:6379
+      - key: UPLOADS_DIR
+        value: uploads
 

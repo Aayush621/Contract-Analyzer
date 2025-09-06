@@ -68,3 +68,4 @@ logs/
 
 # Docker
 .dockerignore
+mongo_test.py
