@@ -270,14 +270,28 @@ celery -A tasks.celery_worker.celery_app worker --loglevel=info
 ### Project Structure
 ```
 contract_analysis/
-├── api/                    # FastAPI routes
-├── core/                   # Configuration
-├── db/                     # Database models and connection
-├── services/               # Business logic
-├── tasks/                  # Celery workers
-├── contract-intelligence-frontend/  # Next.js frontend
-├── uploads/                # File storage
-└── docker-compose.yml      # Container orchestration
+├── api/                           # FastAPI routes and endpoints
+│   └── contracts.py              # Contract management API endpoints
+├── core/                         # Application configuration
+│   └── config.py                 # Settings and environment variables
+├── db/                           # Database models and connection
+│   ├── models.py                 # Pydantic models and schemas
+│   └── mongodb.py                # MongoDB connection and utilities
+├── services/                     # Business logic and processing
+│   └── contract_processor.py     # Core contract analysis engine
+├── tasks/                        # Background task processing
+│   └── celery_worker.py          # Celery worker configuration
+├── contract-intelligence-frontend/  # Next.js frontend application
+│   ├── .env.local                # Frontend environment variables
+│   └── Dockerfile                # Frontend container configuration
+├── uploads/                      # File storage directory
+├── main.py                       # FastAPI application entry point
+├── requirements.txt              # Python dependencies
+├── Dockerfile                    # Backend container configuration
+├── docker-compose.yml            # Multi-service orchestration
+├── .env                          # Backend environment variables
+├── .gitignore                    # Git ignore rules
+└── README.md                     # Project documentation
 ```
 
 ### Key Files
@@ -300,18 +314,32 @@ The system automatically loads required NLP models:
 - User-friendly error messages
 - Automatic retry mechanisms
 
-## 📝 License
+## 🔧 Frontend Configuration
 
-This project is proprietary software. All rights reserved.
+### Environment Variables (.env.local)
+The frontend requires a `.env.local` file in the `contract-intelligence-frontend/` directory:
 
-## 🤝 Contributing
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1/contracts
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+**Purpose:**
+- Configures the API base URL for frontend-backend communication
+- Must match the backend API endpoints
+- Uses `NEXT_PUBLIC_` prefix to expose variables to the browser
 
-## 📞 Support
+### Frontend Dockerfile
+Located at: `contract-intelligence-frontend/Dockerfile`
 
-For technical support or questions, please contact the development team.
+**Overview:**
+- Based on Node.js 18 Alpine image
+- Uses pnpm for package management
+- Builds the Next.js application for production
+- Exposes port 3000
+- Optimized for containerized deployment
+
+**Key Features:**
+- Multi-stage build process
+- Frozen lockfile installation for reproducible builds
+- Production-ready Next.js build
+- Lightweight Alpine Linux base image
