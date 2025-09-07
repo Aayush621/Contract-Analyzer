@@ -3,6 +3,17 @@
 A comprehensive contract analysis platform that automatically extracts key information from PDF contracts using advanced NLP and machine learning techniques.
 The system automatically process contracts, extract critical financial and operational data.
 
+SCREENSHOTS :
+<img width="1440" height="822" alt="Screenshot 2025-09-07 at 11 25 54 PM" src="https://github.com/user-attachments/assets/918fcf65-9a4f-4df0-b725-3de699da0539" />
+<img width="1440" height="819" alt="Screenshot 2025-09-07 at 11 26 06 PM" src="https://github.com/user-attachments/assets/3e377a6d-b40a-4d72-b850-d7ce40dabd44" />
+<img width="1436" height="820" alt="Screenshot 2025-09-07 at 11 26 37 PM" src="https://github.com/user-attachments/assets/cfcb2bf9-bb55-42f9-973f-d530b322b6bc" />
+
+
+
+## Here is the Demo Video of the solution :
+
+[Demo Video🔗](https://drive.google.com/file/d/1JOUor-VIkCEMUEfPbbK0gfhmrf30DZV4/view)
+
 
 ## 🚀 Quick Start - One Command Setup
 
