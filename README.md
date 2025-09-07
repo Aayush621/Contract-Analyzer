@@ -4,9 +4,11 @@ A comprehensive contract analysis platform that automatically extracts key infor
 The system automatically process contracts, extract critical financial and operational data.
 
 SCREENSHOTS :
-<img width="1440" height="822" alt="Screenshot 2025-09-07 at 11 25 54 PM" src="https://github.com/user-attachments/assets/918fcf65-9a4f-4df0-b725-3de699da0539" />
-<img width="1440" height="819" alt="Screenshot 2025-09-07 at 11 26 06 PM" src="https://github.com/user-attachments/assets/3e377a6d-b40a-4d72-b850-d7ce40dabd44" />
-<img width="1436" height="820" alt="Screenshot 2025-09-07 at 11 26 37 PM" src="https://github.com/user-attachments/assets/cfcb2bf9-bb55-42f9-973f-d530b322b6bc" />
+
+
+<img width="850" height="557" alt="Screenshot 2025-09-07 at 11 30 30 PM" src="https://github.com/user-attachments/assets/655e9898-7de2-4c2b-aa84-d336ccac1ea2" />
+<img width="856" height="592" alt="Screenshot 2025-09-07 at 11 30 39 PM" src="https://github.com/user-attachments/assets/fdda9b24-5840-4027-bc15-1fc59b17501b" />
+<img width="500" height="736" alt="Screenshot 2025-09-07 at 11 31 16 PM" src="https://github.com/user-attachments/assets/3a817206-778c-4795-828c-ccb08c8239d3" />
 
 
 
