@@ -10,6 +10,85 @@ The system automatically process contracts, extract critical financial and opera
 - Docker and Docker Compose installed
 - Git (to clone the repository)
 
+## 🛠️ Development
+
+### Project Structure
+```
+contract_analysis/
+├── api/                           # FastAPI routes and endpoints
+│   └── contracts.py              # Contract management API endpoints
+├── core/                         # Application configuration
+│   └── config.py                 # Settings and environment variables
+├── db/                           # Database models and connection
+│   ├── models.py                 # Pydantic models and schemas
+│   └── mongodb.py                # MongoDB connection and utilities
+├── services/                     # Business logic and processing
+│   └── contract_processor.py     # Core contract analysis engine
+├── tasks/                        # Background task processing
+│   └── celery_worker.py          # Celery worker configuration
+├── contract-intelligence-frontend/  # Next.js frontend application
+│   ├── .env.local                # Frontend environment variables
+│   └── Dockerfile                # Frontend container configuration
+├── uploads/                      # File storage directory
+├── main.py                       # FastAPI application entry point
+├── requirements.txt              # Python dependencies
+├── Dockerfile                    # Backend container configuration
+├── docker-compose.yml            # Multi-service orchestration
+├── .env                          # Backend environment variables
+├── .gitignore                    # Git ignore rules
+└── README.md                     # Project documentation
+```
+
+### Key Files
+- `main.py` - FastAPI application entry point
+- `services/contract_processor.py` - Core extraction logic
+- `tasks/celery_worker.py` - Background task processing
+- `api/contracts.py` - REST API endpoints
+- `db/models.py` - Data models and schemas
+
+## 📈 Configuration
+
+### Model Loading
+The system automatically loads required NLP models:
+- SpaCy: `en_core_web_sm` for NER
+- Sentence Transformers: `all-MiniLM-L6-v2` for semantic analysis
+
+### Error Handling
+- Graceful model loading failures
+- Comprehensive error logging
+- User-friendly error messages
+- Automatic retry mechanisms
+
+## 🔧 Frontend Configuration
+
+### Environment Variables (.env.local)
+The frontend requires a `.env.local` file in the `contract-intelligence-frontend/` directory:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1/contracts
+```
+
+**Purpose:**
+- Configures the API base URL for frontend-backend communication
+- Must match the backend API endpoints
+- Uses `NEXT_PUBLIC_` prefix to expose variables to the browser
+
+### Frontend Dockerfile
+Located at: `contract-intelligence-frontend/Dockerfile`
+
+**Overview:**
+- Based on Node.js 18 Alpine image
+- Uses pnpm for package management
+- Builds the Next.js application for production
+- Exposes port 3000
+- Optimized for containerized deployment
+
+**Key Features:**
+- Multi-stage build process
+- Frozen lockfile installation for reproducible builds
+- Production-ready Next.js build
+- Lightweight Alpine Linux base image
+
 ### Single Command Deployment
 ```bash
 # Clone the repository
@@ -100,6 +179,8 @@ The system follows a microservices architecture with the following components:
 - **Radix UI** - Headless UI components
 - **React Hook Form** - Form management
 - **Recharts** - Data visualization
+
+
 
 ## 📋 System Workflow
 
@@ -265,81 +346,4 @@ celery -A tasks.celery_worker.celery_app worker --loglevel=info
 - Redis for task queue and caching
 - Volume mounting for data persistence
 
-## 🛠️ Development
 
-### Project Structure
-```
-contract_analysis/
-├── api/                           # FastAPI routes and endpoints
-│   └── contracts.py              # Contract management API endpoints
-├── core/                         # Application configuration
-│   └── config.py                 # Settings and environment variables
-├── db/                           # Database models and connection
-│   ├── models.py                 # Pydantic models and schemas
-│   └── mongodb.py                # MongoDB connection and utilities
-├── services/                     # Business logic and processing
-│   └── contract_processor.py     # Core contract analysis engine
-├── tasks/                        # Background task processing
-│   └── celery_worker.py          # Celery worker configuration
-├── contract-intelligence-frontend/  # Next.js frontend application
-│   ├── .env.local                # Frontend environment variables
-│   └── Dockerfile                # Frontend container configuration
-├── uploads/                      # File storage directory
-├── main.py                       # FastAPI application entry point
-├── requirements.txt              # Python dependencies
-├── Dockerfile                    # Backend container configuration
-├── docker-compose.yml            # Multi-service orchestration
-├── .env                          # Backend environment variables
-├── .gitignore                    # Git ignore rules
-└── README.md                     # Project documentation
-```
-
-### Key Files
-- `main.py` - FastAPI application entry point
-- `services/contract_processor.py` - Core extraction logic
-- `tasks/celery_worker.py` - Background task processing
-- `api/contracts.py` - REST API endpoints
-- `db/models.py` - Data models and schemas
-
-## 📈 Configuration
-
-### Model Loading
-The system automatically loads required NLP models:
-- SpaCy: `en_core_web_sm` for NER
-- Sentence Transformers: `all-MiniLM-L6-v2` for semantic analysis
-
-### Error Handling
-- Graceful model loading failures
-- Comprehensive error logging
-- User-friendly error messages
-- Automatic retry mechanisms
-
-## 🔧 Frontend Configuration
-
-### Environment Variables (.env.local)
-The frontend requires a `.env.local` file in the `contract-intelligence-frontend/` directory:
-
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1/contracts
-```
-
-**Purpose:**
-- Configures the API base URL for frontend-backend communication
-- Must match the backend API endpoints
-- Uses `NEXT_PUBLIC_` prefix to expose variables to the browser
-
-### Frontend Dockerfile
-Located at: `contract-intelligence-frontend/Dockerfile`
-
-**Overview:**
-- Based on Node.js 18 Alpine image
-- Uses pnpm for package management
-- Builds the Next.js application for production
-- Exposes port 3000
-- Optimized for containerized deployment
-
-**Key Features:**
-- Multi-stage build process
-- Frozen lockfile installation for reproducible builds
-- Production-ready Next.js build
-- Lightweight Alpine Linux base image
