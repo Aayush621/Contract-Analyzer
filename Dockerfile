@@ -1,35 +1,41 @@
-# Dockerfile (Corrected and Simplified)
 
-# 1. Use an official, lightweight Python base image
-FROM python:3.11
 
-# 2. Set the working directory inside the container
+
+FROM python:3.11-slim
+
+
 WORKDIR /app
 
-# 3. Set environment variables
+# 3. Set environment variables to prevent Python from writing .pyc files
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# 4. Install system dependencies for PDF processing
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    libssl-dev \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Copy and install requirements
+
 COPY requirements.txt .
+
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Download the necessary NLP models during the build phase
-# This is crucial for both the 'lazy loading' fix and performance.
-RUN python -m spacy download en_core_web_trf
+
+RUN python -m spacy download en_core_web_sm
+
+
 RUN python -c "import nltk; nltk.download('punkt')"
 
-# 6. Copy the rest of the application code
+
 COPY . .
 
-# 7. Expose the port for the web service
+# 10. Creates uploads directory
+RUN mkdir -p uploads
+
+# 11. Exposes the port the API will run on
 EXPOSE 8000
 
-# 8. Set the DEFAULT command. This will be used by the 'web' service.
-# The 'worker' service in render.yaml will override this.
+# 12. Default command 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

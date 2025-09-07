@@ -4,6 +4,7 @@ from core.config import settings
 from pymongo import MongoClient
 import re
 from services.contract_processor import analyze_contract_advanced
+import os
 
 celery_app = Celery("tasks", broker=settings.REDIS_URI, backend=settings.REDIS_URI)
 celery_app.conf.update(task_serializer='json', result_serializer='json', accept_content=['json'])
@@ -12,25 +13,42 @@ celery_app.conf.update(task_serializer='json', result_serializer='json', accept_
 def process_contract_task(contract_id: str, file_path: str):
     """
     The background task that uses the advanced, scalable processing pipeline.
-    This worker's logic remains stable; all intelligence changes happen in the processor.
     """
+    print(f"=== CELERY TASK STARTED ===")
     print(f"Processing contract_id: {contract_id}")
+    print(f"File path: {file_path}")
     
-    mongo_client = MongoClient(settings.MONGO_URI)
-    db = mongo_client[settings.MONGO_DB_NAME]
-    contracts_collection = db["contracts"]
-
-    def update_progress(percentage: int, message: str):
-        contracts_collection.update_one(
-            {"contract_id": contract_id},
-            {"$set": {"progress_percentage": percentage, "progress_message": message}}
-        )
-        print(f"[{contract_id}] Progress: {percentage}% - {message}")
-
     try:
-        update_progress(10, "Starting advanced contract analysis...")
+        # Test MongoDB connection first
+        print("Testing MongoDB connection...")
+        mongo_client = MongoClient(settings.MONGO_URI)
+        db = mongo_client[settings.MONGO_DB_NAME]
+        contracts_collection = db["contracts"]
+        print(f"MongoDB connected successfully. Database: {settings.MONGO_DB_NAME}")
         
+        # Test file existence
+        print(f"Checking if file exists: {file_path}")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+        print("File exists, proceeding with analysis...")
+        
+        def update_progress(percentage: int, message: str):
+            contracts_collection.update_one(
+                {"contract_id": contract_id},
+                {"$set": {"progress_percentage": percentage, "progress_message": message}}
+            )
+            print(f"[{contract_id}] Progress: {percentage}% - {message}")
+
+        update_progress(10, "Starting contract analysis...")
+        
+        # Test model loading
+        print("Testing model loading...")
+        from services.contract_processor import analyze_contract_advanced
+        print("Contract processor imported successfully")
+        
+        update_progress(20, "Loading NLP models...")
         analysis_result = analyze_contract_advanced(file_path)
+        print("Analysis completed successfully")
 
         update_progress(90, "Finalizing analysis and saving results...")
 
@@ -76,17 +94,27 @@ def process_contract_task(contract_id: str, file_path: str):
 
     except Exception as e:
         error_msg = f"An error occurred: {str(e)}"
-        print(f"Error processing contract {contract_id}: {error_msg}")
-        contracts_collection.update_one(
-            {"contract_id": contract_id},
-            {"$set": {
-                "processing_status": "error",
-                "progress_percentage": 100,
-                "progress_message": "Processing failed.",
-                "error_message": error_msg,
-            }}
-        )
+        print(f"ERROR processing contract {contract_id}: {error_msg}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        
+        try:
+            contracts_collection.update_one(
+                {"contract_id": contract_id},
+                {"$set": {
+                    "processing_status": "error",
+                    "progress_percentage": 100,
+                    "progress_message": "Processing failed.",
+                    "error_message": error_msg,
+                }}
+            )
+        except Exception as update_error:
+            print(f"Failed to update error status: {update_error}")
     finally:
-        mongo_client.close()
+        try:
+            mongo_client.close()
+        except:
+            pass
 
     return {"contract_id": contract_id, "status": "processing_finished"}

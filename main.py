@@ -23,7 +23,7 @@ app.add_middleware(
     allow_headers=_headers,
 )
 
-# Register event handlers for DB connection
+# Registers event handlers for DB connection
 @app.on_event("startup")
 async def startup_event():
     await connect_to_mongo()
@@ -32,7 +32,7 @@ async def startup_event():
 async def shutdown_event():
     await close_mongo_connection()
 
-# Include the API router
+# Includes the API router
 app.include_router(contracts.router, prefix="/api/v1")
 
 @app.get("/")

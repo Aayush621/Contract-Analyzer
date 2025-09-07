@@ -32,7 +32,7 @@ async def upload_contract(file: UploadFile = File(...)):
             buffer.write(await file.read())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
-    contracts_collection = get_collection("contracts")
+    contracts_collection = get_collection("contracts") 
     await contracts_collection.insert_one(contract.dict(by_alias=True))
     process_contract_task.delay(contract.contract_id, str(file_path))
     return JSONResponse(status_code=202, content={"contract_id": contract.contract_id, "status": "processing", "message": "Contract uploaded successfully."})
@@ -40,8 +40,7 @@ async def upload_contract(file: UploadFile = File(...)):
 
 @router.get("/contracts/{contract_id}/status", response_model=StatusResponse)
 async def get_contract_status(contract_id: str):
-
-    contract = await get_collection("contracts").find_one({"contract_id": contract_id})
+    contract = await get_collection("contracts").find_one({"contract_id": contract_id}) 
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     return StatusResponse(
@@ -73,7 +72,7 @@ async def get_contract_data(contract_id: str):
     
     if status == "error":
         raise HTTPException(
-            status_code=409, # Conflict with the resource's state
+            status_code=409, 
             detail=f"Processing failed for this contract. Error: {contract.get('error_message')}"
         )
 
@@ -93,118 +92,70 @@ async def get_contract_data(contract_id: str):
 
 @router.get("/contracts", response_model=PaginatedContractResponse)
 async def list_contracts(
-    page: int = Query(1, ge=1, description="Page number, starting from 1"),
-    size: int = Query(10, ge=1, le=100, description="Number of items per page"),
-    
-    q: Optional[str] = Query(None, description="Free-text search across file name and extracted party names."),
-
-    # Filtering parameters
-    status: Optional[str] = Query(None, description="Filter by processing status (e.g., 'completed', 'error')"),
-    start_date: Optional[datetime] = Query(None, description="Filter contracts uploaded after this date (ISO format)"),
-    end_date: Optional[datetime] = Query(None, description="Filter contracts uploaded before this date (ISO format)"),
-    file_name_contains: Optional[str] = Query(None, description="Filter by file name containing this text (case-insensitive)"),
-    
-    # Sorting parameters
-    sort_by: str = Query("upload_timestamp", description="Field to sort by: 'upload_timestamp', 'file_name', 'processing_status'"),
-    sort_order: str = Query("desc", description="Sort order: 'asc' or 'desc'")
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    sort_by: str = Query("upload_timestamp", regex="^(upload_timestamp|file_name|processing_status)$"),
+    sort_order: str = Query("desc", regex="^(asc|desc)$")
 ):
-    """
-    Retrieves a paginated and filterable list of all uploaded contracts.
-    """
-    contracts_collection = get_collection("contracts")
-    query = {}
-
-    # --- 1. Build the filter query dynamically ---
-
-    if q:
-        # Adding the text search clause if a search query is provided
-        query["$text"] = {"$search": q}
-        
-    if status:
-        query["processing_status"] = status
-    if file_name_contains:
-        # Using a case-insensitive regex search for partial matches
-        query["file_name"] = {"$regex": file_name_contains, "$options": "i"}
-    if start_date or end_date:
-        query["upload_timestamp"] = {}
-        if start_date:
-            query["upload_timestamp"]["$gte"] = start_date
-        if end_date:
-            query["upload_timestamp"]["$lte"] = end_date
-    
-    # --- 2. Get the total count for pagination ---
+    """List all contracts with pagination and sorting."""
     try:
-        total_items = await contracts_collection.count_documents(query)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database count error: {e}")
-
-    # --- 3. Prepare sorting and pagination parameters ---
-    skip = (page - 1) * size
-    
-    # Validate sort parameters
-    allowed_sort_fields = {"upload_timestamp", "file_name", "processing_status"}
-    if sort_by not in allowed_sort_fields:
-        raise HTTPException(status_code=400, detail=f"Invalid sort_by field. Allowed values: {list(allowed_sort_fields)}")
-    
-    if q is None and sort_by == "relevance":
-        raise HTTPException(status_code=400, detail="Cannot sort by 'relevance' without a search query 'q'.")
-
-
-    sort_direction = DESCENDING if sort_order.lower() == "desc" else ASCENDING
-
-    # Define the sorting criteria
-    if sort_by == "relevance":
-        sort_criteria = {"score": {"$meta": "textScore"}}
-    else:
-        sort_direction = DESCENDING if sort_order.lower() == "desc" else ASCENDING
-        sort_criteria = (sort_by, sort_direction)
-
-
-    # --- 4. Define Projection (Critical for Performance) ---
-    # Only fetch the data needed for the summary view to keep the response fast.
-    projection = {
-        "contract_id": 1, "file_name": 1, "upload_timestamp": 1,
-        "processing_status": 1, "gaps_count": 1, "file_size": 1, "_id": 0
-    }
-    # If sorting by relevance, we must also project the score
-    if sort_by == "relevance":
-        projection["score"] = {"$meta": "textScore"}
-    
-    # --- 5. Execute the query to get the paginated list ---
-    try:
-        cursor = contracts_collection.find(
-        query,
-        projection
-    ).sort(*sort_criteria if isinstance(sort_criteria, tuple) else sort_criteria).skip(skip).limit(size)
+        contracts_collection = get_collection("contracts")
         
-        contracts_list = await cursor.to_list(length=size)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database fetch error: {e}")
-
-    # --- 6. Format the results into the response model ---
-    summaries = [
-        ContractSummary(
-            contract_id=c.get("contract_id"),
-            file_name=c.get("file_name"),
-            upload_timestamp=c.get("upload_timestamp"),
-            processing_status=c.get("processing_status"),
-            # Calculate gaps_count safely, handling cases where the field might be missing
-             gaps_count=c.get("gaps_count") or 0,
-             file_size=c.get("file_size") or 0,
+        # Build sort criteria
+        sort_direction = -1 if sort_order == "desc" else 1
+        sort_criteria = [(sort_by, sort_direction)]
+        
+        # Calculate skip value for pagination
+        skip = (page - 1) * size
+        
+        # Get total count
+        total_count = await contracts_collection.count_documents({})
+        
+        # Get contracts with pagination and sorting
+        contracts_cursor = contracts_collection.find({}).sort(sort_criteria).skip(skip).limit(size)
+        contracts = []
+        
+        async for c in contracts_cursor:
+            # Handle missing upload_timestamp
+            upload_timestamp = c.get("upload_timestamp")
+            if upload_timestamp is None:
+                # Use created_at if available, otherwise use current time
+                upload_timestamp = c.get("created_at") or datetime.now()
+            
+            contracts.append(ContractSummary(
+                contract_id=c.get("contract_id"),
+                file_name=c.get("file_name"),
+                processing_status=c.get("processing_status", "unknown"),
+                progress_percentage=c.get("progress_percentage", 0),
+                upload_timestamp=upload_timestamp,
+                file_size=c.get("file_size") or 0,
+                gaps_count=c.get("gaps_count") or 0,
+            ))
+        
+        # Calculate pagination info
+        total_pages = (total_count + size - 1) // size
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return PaginatedContractResponse(
+            total_items=total_count,
+            items=contracts,
+            page=page,
+            size=size,
+            total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev
         )
-        for c in contracts_list
-    ]
-
-    return PaginatedContractResponse(
-        total_items=total_items, items=summaries, page=page, size=size
-    )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing contracts: {str(e)}")
 
 @router.get("/contracts/{contract_id}/download")
 async def download_contract(contract_id: str):
     """
     Downloads the original PDF file for a given contract ID.
     """
-    contracts_collection = get_collection("contracts")
+    contracts_collection = get_collection("contracts") 
     
     # 1. Find the contract document in the database
     contract = await contracts_collection.find_one({"contract_id": contract_id})
@@ -230,3 +181,4 @@ async def download_contract(contract_id: str):
         media_type='application/pdf',
         filename=original_filename # This sets the "Content-Disposition" header
     )
+

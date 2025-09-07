@@ -7,7 +7,7 @@ import uuid
 class ExtractedField(BaseModel):
     value: Any
     confidence_score: float = Field(..., ge=0, le=1) # Score between 0 and 1
-    source_snippet: Optional[str] = None # Optional: a small piece of text where it was found
+    source_snippet: Optional[str] = None 
     source_page: Optional[int] = None
     
 # --- Main Contract Model (in DB) ---
@@ -47,11 +47,14 @@ class ContractSummary(BaseModel):
     file_name: str
     upload_timestamp: datetime
     processing_status: str
-    gaps_count: int # A useful metric for a list view
+    progress_percentage: int = 0
+    gaps_count: int
     file_size: int
+    
 # --- The structured response model for the paginated endpoint ---
 class PaginatedContractResponse(BaseModel):
     total_items: int
     items: List[ContractSummary]
     page: int
     size: int
+    
